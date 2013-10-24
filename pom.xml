@@ -26,9 +26,9 @@
     </licenses>
 
     <scm>
-      <connection>scm:git:git://github.com/plausiblelabs/metrics-cloudwatch.git</connection>
-      <developerConnection>scm:git:git@github.com:plausiblelabs/metrics-cloudwatch.git</developerConnection>
-      <url>https://github.com/plausiblelabs/metrics-cloudwatch/</url>
+      <connection>scm:git:git://github.com/omnifone/metrics-cloudwatch.git</connection>
+      <developerConnection>scm:git:git@github.com:omnifone/metrics-cloudwatch.git</developerConnection>
+      <url>https://github.com/omnifone/metrics-cloudwatch/</url>
     </scm>
 
     <developers>
