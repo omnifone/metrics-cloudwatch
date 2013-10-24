@@ -15,7 +15,7 @@
 
     <name>Metrics for CloudWatch</name>
     <description>Sends Metrics data to Amazon's CloudWatch</description>
-    <url>https://github.com/plausiblelabs/metrics-cloudwatch</url>
+    <url>https://github.com/omnifone/metrics-cloudwatch</url>
 
     <licenses>
       <license>
