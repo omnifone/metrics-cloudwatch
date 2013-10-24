@@ -520,7 +520,7 @@ public class CloudWatchReporter extends AbstractPollingReporter implements Metri
         if (gauge.value() instanceof Number) {
             sendValue(context, sanitizeName(name), ((Number) gauge.value()).doubleValue(), StandardUnit.None, createDimensions(name, gauge));
         } else if (unsendable.add(name)) {
-            LOG.warn("The type of the value for {} is {}. It must be a subclass of Number to send to CloudWatch.", name, gauge.value().getClass());
+            LOG.warn("The type of the value for {} is {}. It must be a subclass of Number to send to CloudWatch.", name, gauge.value() == null ? "null" : gauge.value().getClass());
         }
     }
 
