@@ -1,38 +1,29 @@
 package com.plausiblelabs.metrics.reporting;
 
-import java.io.IOException;
-import java.util.concurrent.TimeUnit;
-
-import org.junit.After;
-import org.junit.Test;
-
 import com.amazonaws.services.cloudwatch.model.MetricDatum;
 import com.amazonaws.services.cloudwatch.model.StandardUnit;
+import com.codahale.metrics.Counter;
+import com.codahale.metrics.Gauge;
+import com.codahale.metrics.MetricRegistry;
+import static com.codahale.metrics.MetricRegistry.name;
+import com.codahale.metrics.Timer;
 import com.google.common.collect.Sets;
-import com.yammer.metrics.core.Counter;
-import com.yammer.metrics.core.Gauge;
-import com.yammer.metrics.core.MetricsRegistry;
-import com.yammer.metrics.core.Timer;
-import com.yammer.metrics.core.VirtualMachineMetrics;
-
+import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.assertTrue;
+import org.junit.Test;
 
 public class CloudWatchReporterTest {
     // Use a separate registry for each test to keep the metrics apart
-    private MetricsRegistry testRegistry = new MetricsRegistry();
+    private MetricRegistry testRegistry = new MetricRegistry();
     private DummyCloudWatchClient client = new DummyCloudWatchClient();
     private CloudWatchReporter.Enabler enabler =
         new CloudWatchReporter.Enabler("testnamespace", client).withRegistry(testRegistry);
-
-    @After
-    public void shutdownRegistry() {
-        testRegistry.shutdown();
-    }
-
+    
     @Test
     public void testDefaultSentMetrics() throws IOException, InterruptedException {
-        enabler.build().run();
+        enabler.build().report();
         assertEquals(2, client.putData.size());
         for (MetricDatum datum : client.putData) {
             assertTrue(datum.getDimensions().isEmpty());
@@ -42,7 +33,7 @@ public class CloudWatchReporterTest {
 
     @Test
     public void testInstanceIdDimension() throws IOException, InterruptedException {
-        enabler.withInstanceIdDimension("flask").build().run();
+        enabler.withInstanceIdDimension("flask").build().report();
         assertEquals(2, client.putData.size());
         for (MetricDatum datum : client.putData) {
             assertEquals(1, datum.getDimensions().size());
@@ -53,13 +44,13 @@ public class CloudWatchReporterTest {
 
     @Test
     public void testDisablingDefaults() throws IOException, InterruptedException {
-        enabler.withJVMMemory(false).build().run();
+        enabler.withJVMMemory(false).build().report();
         assertEquals(0, client.putData.size());
     }
 
     @Test
     public void testAllJVMMetricsSent() throws IOException, InterruptedException {
-        enabler.withJVMThreadState(true).withJVMGC(true).build().run();
+        enabler.withJVMThreadState(true).withJVMGC(true).build().report();
         assertEquals(2 + // memory metrics
             Thread.State.values().length + 2 + // Thread metrics
             VirtualMachineMetrics.getInstance().garbageCollectors().size() * 2, // GC metrics
@@ -73,14 +64,17 @@ public class CloudWatchReporterTest {
             .withFiveMinuteRate(true)
             .withOneMinuteRate(false)
             .withTimerSummary(true)
-            .withPercentiles(.1, .5, .9, .999);
-        Timer timer = testRegistry.newTimer(CloudWatchReporterTest.class, "TestTimer", TimeUnit.MINUTES, TimeUnit.MINUTES);
+            .withPercentiles(.1, .5, .9, .999)
+            .withDurationUnit(StandardUnit.Seconds)
+            .withRateUnit(StandardUnit.Seconds);
+        
+        Timer timer = testRegistry.timer(name(CloudWatchReporterTest.class, "TestTimer"));
         for (int i = 0; i < 100; i++) {
             for (int j = 0; j < 50; j++) {
                 timer.update(i, TimeUnit.MINUTES);
             }
         }
-        enabler.build().run();
+        enabler.build().report();
         assertEquals(9, client.putData.size());
         assertEquals(Sets.newHashSet("com.plausiblelabs.metrics.reporting.CloudWatchReporterTest.TestTimer.median",
                                      "com.plausiblelabs.metrics.reporting.CloudWatchReporterTest.TestTimer_percentile_0.999",
@@ -101,40 +95,41 @@ public class CloudWatchReporterTest {
 
     @Test
     public void testUnsupportedGaugeType() {
-        testRegistry.newGauge(CloudWatchReporterTest.class, "TestGague", new Gauge<String>() {
+        testRegistry.register(name(CloudWatchReporterTest.class, "TestGague"), new Gauge<String>() {
             @Override
-            public String value() {
+            public String getValue() {
                 return "A value!";
             }
         });
-        enabler.withJVMMemory(false).build().run();
+        enabler.withJVMMemory(false).build().report();
         assertEquals(0, client.putData.size());
     }
 
     @Test
     public void testSupportedGaugeType() {
-        testRegistry.newGauge(CloudWatchReporterTest.class, "TestGague", new Gauge<Double>() {
+        testRegistry.register(name(CloudWatchReporterTest.class, "TestGague"), new Gauge<Double>() {
             @Override
-            public Double value() {
+            public Double getValue() {
                 return 5.0;
             }
         });
-        enabler.withJVMMemory(false).build().run();
+        enabler.withJVMMemory(false).build().report();
         assertEquals(1, client.putData.size());
     }
 
     @Test
     public void testCounter() {
-        Counter counter = testRegistry.newCounter(CloudWatchReporterTest.class, "TestCounter");
+        Counter counter = testRegistry.counter(name(CloudWatchReporterTest.class, "TestCounter"));
         CloudWatchReporter reporter = enabler.withJVMMemory(false).build();
-        reporter.run();
+        reporter.report();
         assertEquals(1, client.putData.size());
         assertEquals(0.0, client.putData.get(0).getValue());
         assertEquals(StandardUnit.Count.toString(), client.putData.get(0).getUnit());
         counter.inc();
         client.putData.clear();
-        reporter.run();
+        reporter.report();
         assertEquals(1.0, client.putData.get(0).getValue());
-
     }
+    
+    
 }

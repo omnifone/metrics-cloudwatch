@@ -5,51 +5,53 @@
 package com.plausiblelabs.metrics.reporting;
 
 import com.amazonaws.auth.AWSCredentials;
-import com.yammer.metrics.Metrics;
-import com.yammer.metrics.core.Gauge;
-import com.yammer.metrics.core.MetricName;
-import com.yammer.metrics.core.Timer;
-import org.junit.Test;
-
+import com.codahale.metrics.Gauge;
+import com.codahale.metrics.MetricRegistry;
+import static com.codahale.metrics.MetricRegistry.name;
+import com.codahale.metrics.Timer;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
+import org.junit.Test;
 
 public class RemoteCloudWatchTest {
     @Test
     public void testSendingToAmazon() throws IOException {
+        MetricRegistry registry = new MetricRegistry();
+        
         AWSCredentials creds = null;
-        Timer timer = Metrics.newTimer(CloudWatchReporterTest.class, "TestTimer", TimeUnit.MINUTES, TimeUnit.MINUTES);
+        Timer timer = registry.timer(name(CloudWatchReporterTest.class, "TestTimer"));
         for (int i = 0; i < 100; i++) {
             for (int j = 0; j < 50; j++) {
                 timer.update(i, TimeUnit.MINUTES);
             }
         }
-        Metrics.newGauge(new MetricName("test", "limits", "NegSmall"), new Gauge<Double>() {
+        registry.register(name("test.limits.NegSmall"), new Gauge<Double>() {
             @Override
-            public Double value() {
+            public Double getValue() {
                 return -1E-109;
             }
         });
-        Metrics.newGauge(new MetricName("test", "limits", "PosSmall"), new Gauge<Double>() {
+        registry.register(name("test.limits.PosSmall"), new Gauge<Double>() {
             @Override
-            public Double value() {
+            public Double getValue() {
                 return 1E-109;
             }
         });
-        Metrics.newGauge(new MetricName("test", "limits", "NegLarge"), new Gauge<Double>() {
+        registry.register(name("test.limits.NegLarge"), new Gauge<Double>() {
             @Override
-            public Double value() {
+            public Double getValue() {
                 return -CloudWatchReporter.LARGEST_SENDABLE * 10;
             }
         });
-        Metrics.newGauge(new MetricName("test", "limits", "PosLarge"), new Gauge<Double>() {
+        registry.register(name("test.limits.PosLarge"), new Gauge<Double>() {
             @Override
-            public Double value() {
+            public Double getValue() {
                 return CloudWatchReporter.LARGEST_SENDABLE * 10;
             }
         });
+        
         new CloudWatchReporter.Enabler("cxabf", creds)
-            .withInstanceIdDimension("test").build().run();
-
+            .withRegistry(registry)
+            .withInstanceIdDimension("test").build().report();
     }
 }
