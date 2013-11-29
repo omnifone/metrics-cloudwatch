@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class VirtualMachineMetrics {
 
-    public class GarbageCollectorStats {
+    public static class GarbageCollectorStats {
         private long time;
         private long runs;
 
@@ -118,7 +118,7 @@ public class VirtualMachineMetrics {
             }
             
             String collectorName = "";
-            String[] vecKey = metric.getKey().split(".");
+            String[] vecKey = metric.getKey().split("\\.");
             if((vecKey != null) && (vecKey.length == 4)) {
                 collectorName = vecKey[2];
             }

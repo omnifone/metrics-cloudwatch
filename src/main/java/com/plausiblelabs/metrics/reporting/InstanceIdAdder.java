@@ -8,10 +8,12 @@ import com.amazonaws.services.cloudwatch.model.Dimension;
 import com.codahale.metrics.Metric;
 import com.codahale.metrics.MetricFilter;
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.logging.Level;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.HttpGet;
@@ -49,6 +51,8 @@ class InstanceIdAdder implements DimensionAdder {
 
     private void fetchInstanceId() {
         DefaultHttpClient httpClient = new DefaultHttpClient();
+        InputStream content = null;
+        
         try {
             HttpGet get = new HttpGet("http://169.254.169.254/latest/meta-data/instance-id");
             HttpResponse resp = httpClient.execute(get);
@@ -58,7 +62,8 @@ class InstanceIdAdder implements DimensionAdder {
                 }
                 return;
             }
-            InputStream content = resp.getEntity().getContent();
+            
+            content = resp.getEntity().getContent();
             setInstanceId(new BufferedReader(new InputStreamReader(content, "ASCII")).readLine());
             if (attemptedFetchingInstanceId) {
                 LOG.warn("Succeeded fetching instanceId after failure; the instance id will be correct now");
@@ -71,6 +76,14 @@ class InstanceIdAdder implements DimensionAdder {
             attemptedFetchingInstanceId = true;
             lastAttemptMillis = System.currentTimeMillis();
             httpClient.getConnectionManager().shutdown();
+            
+            if(content != null) {
+                try {
+                    content.close();
+                } catch (IOException ex) {
+                    LOG.warn("Uable to close input stream", ex);
+                }
+            }
         }
     }
 

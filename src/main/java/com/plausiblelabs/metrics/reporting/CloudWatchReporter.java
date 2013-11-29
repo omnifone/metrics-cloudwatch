@@ -622,7 +622,7 @@ public class CloudWatchReporter extends ScheduledReporter {
 
         Snapshot snapshot = histogram.getSnapshot();
         for (double percentile : percentilesToSend) {
-            if (percentile == .5) {
+            if (Double.valueOf(percentile).equals(Double.valueOf(.5))) {
                 sendValue(context, sanitizedName + ".median", snapshot.getMedian(), StandardUnit.None, dimensions);
             } else {
                 sendValue(context, sanitizedName + "_percentile_" + percentile, 
@@ -649,7 +649,7 @@ public class CloudWatchReporter extends ScheduledReporter {
         String sanitizedName = sanitizeName(name);
         Snapshot snapshot = timer.getSnapshot();
         for (double percentile : percentilesToSend) {
-            if (percentile == .5) {
+            if (Double.valueOf(percentile).equals(Double.valueOf(.5))) {
                 sendValue(context, sanitizedName + ".median", convertIfNecessary(snapshot.getMedian(), recordedUnit, durationUnit), durationUnit, dimensions);
             } else {
                 sendValue(context, sanitizedName + "_percentile_" + percentile, convertIfNecessary(snapshot.getValue(percentile), recordedUnit, durationUnit), durationUnit, dimensions);
