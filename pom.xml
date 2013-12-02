@@ -10,7 +10,7 @@
 
     <groupId>com.plausiblelabs.metrics</groupId>
     <artifactId>metrics-cloudwatch</artifactId>
-    <version>3.0.1.2-SNAPSHOT</version>
+    <version>3.0.1.1.Omnifone-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>Metrics for CloudWatch</name>
